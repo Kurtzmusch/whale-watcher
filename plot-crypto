@@ -34,7 +34,7 @@ def compile_stable_ins(t):
 	txs_db = {}
 	txs_objs = {}
 	for ticker in stable_tickers:
-		txs_db[ticker] = open('.whale-txs-'+ticker+'.db.json', 'r')
+		txs_db[ticker] = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
 		txs_objs[ticker] = json.load(txs_db[ticker])
 		txs_db[ticker].close()
 	ins = {'timestamps': [], 'values': []}
@@ -49,7 +49,7 @@ def compile_stable_net(t):
 	txs_db = {}
 	txs_objs = {}
 	for ticker in stable_tickers:
-		txs_db[ticker] = open('.whale-txs-'+ticker+'.db.json', 'r')
+		txs_db[ticker] = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
 		txs_objs[ticker] = json.load(txs_db[ticker])
 		txs_db[ticker].close()
 	nets = {'timestamps': [], 'values': []}
@@ -71,7 +71,7 @@ def compile_stable_net(t):
 
 def compile_ins(ticker):
 	
-	txs_db = open('.whale-txs-'+ticker+'.db.json', 'r')
+	txs_db = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
 	txs_objs = json.load(txs_db)
 	txs_db.close()
 	ins = {'timestamps': [], 'values': []}
@@ -85,7 +85,7 @@ def compile_ins(ticker):
 
 def compile_net(ticker):
 	
-	txs_db = open('.whale-txs-'+ticker+'.db.json', 'r')
+	txs_db = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
 	txs_objs = json.load(txs_db)
 	txs_db.close()
 	nets = {'timestamps': [], 'values': []}
@@ -140,8 +140,9 @@ def main():
 
 
 def plot_arrays( data_arrays ):
-	
+		
 	axes = pp.subplot(len(data_arrays),1,1)
+	price_axes = axes
 	
 	axes.plot(data_arrays[0]['timestamps'], data_arrays[0]['values'], marker='o',linestyle=' ', color=theme_objs['colors']['color1'])
 	
@@ -165,7 +166,7 @@ def plot_arrays( data_arrays ):
 	
 	iteration = 2
 	for i in range( 1, len(data_arrays) ):
-		axes = pp.subplot(len(data_arrays),1,iteration)
+		axes = pp.subplot(len(data_arrays),1,iteration, sharex=price_axes)
 		
 		axes.plot(data_arrays[i]['timestamps'], data_arrays[i]['values'], marker='o',linestyle=' ', color=theme_objs['colors']['color'+str(iteration)])
 		
