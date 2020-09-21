@@ -5,7 +5,9 @@ import time
 import requests
 import json
 
-apikey = 'your api key here'
+key_file = open('whale-alert-api-key', 'r')
+apikey = key_file.read()[:-1]
+key_file.close()
 
 tickers = ['btc', 'eth', 'usdc', 'usdt']
 stable_tickers = ['usdc','usdt']
