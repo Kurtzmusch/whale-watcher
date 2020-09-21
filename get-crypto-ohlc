@@ -1,0 +1,76 @@
+#!/usr/bin/python3.6
+
+import sys
+import time
+import requests
+import json
+
+CLOSE_TIME_INDEX = 0
+OPEN_INDEX = 1
+HIGH_INDEX = 2
+LOW_INDEX = 3
+CLOSE_INDEX = 4
+
+tickers = ["btc","eth"]
+exchanges = ["kraken","bitfinex","binance-us"]
+
+ohlc_dbs = {}
+ohlc_cache = "dbs/crypto-ohlc.cache.json"
+
+ticker_avg = {}
+
+for ticker in tickers:
+	ohlc_dbs[ticker] = "dbs/crypto-ohlc-"+ticker+".db.json"
+
+cache_file = open(ohlc_cache,'r')
+cache_objs = json.load(cache_file)
+cache_file.close()
+
+current_time = int(time.time())
+current_hour = current_time // 3600
+current_hour_timestamp = 3600*current_hour
+
+before = current_hour_timestamp
+after = int(cache_objs["last-known-hour-timestamp"])+3600
+
+if before != after:
+	print( 'fetching from hour '+str(after//3600)+' to '+str(before//3600) )
+
+for ticker in tickers:
+	ticker_avg[ticker] = {}
+	for i in range(after, before+3600, 3600):
+		ticker_avg[ticker][str(i)] = 0
+	for exchange in exchanges:
+		#get candles since cache hour
+		response = requests.get('https://api.cryptowat.ch/markets/'+exchange+'/'+ticker+'usd/ohlc?after='+str(after)+'&before='+str(before)+'&periods=3600', timeout=8)
+		if response.status_code != 200:
+			print( 'error status: '+ str(response.status) )
+			sys.exit()
+		response_str = response.text
+		response_objs = json.loads(response_str)
+		candles_numof = len( response_objs["result"]["3600"] )
+		for i in range(0, candles_numof):
+			candle_close_time = str(response_objs["result"]["3600"][i][CLOSE_TIME_INDEX])
+			ticker_avg[ticker][candle_close_time] += ( response_objs["result"]["3600"][i][OPEN_INDEX] + response_objs["result"]["3600"][i][CLOSE_INDEX] ) / 2
+	for candle_close_time in ticker_avg[ticker]:
+		ticker_avg[ticker][candle_close_time] /= len(exchanges)
+
+
+for ticker in tickers:
+	ohlc_db = open( ohlc_dbs[ticker], "rb+" )
+	ohlc_db.seek(-3, 2)
+	ohlc_db.write(b",\n")
+	entry_string = ""
+	for candle_close_time in ticker_avg[ticker]:
+		entry_string = '"'+candle_close_time+'"'+":"+str( int(ticker_avg[ticker][candle_close_time]) )+",\n"
+		print(entry_string)
+		ohlc_db.write(entry_string.encode('utf-8'))
+	ohlc_db.seek(-2, 1) #remove the comma on the last entry
+	ohlc_db.write(b"\n}")
+	ohlc_db.close()
+
+cache_file = open(ohlc_cache,'w')
+cache_objs = {}
+cache_objs["last-known-hour-timestamp"] = str(current_hour_timestamp)
+json.dump(cache_objs, cache_file)
+cache_file.close()

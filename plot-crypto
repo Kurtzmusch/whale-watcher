@@ -1,0 +1,286 @@
+#!/usr/bin/python3.6
+
+import matplotlib
+import matplotlib.pyplot as pp
+import numpy as np
+import json
+import sys
+import getopt
+
+#load theme colors
+theme_file = open("colors.json", 'r')
+theme_objs = json.load(theme_file)
+theme_file.close()
+
+tickers = ['btc', 'eth']
+stable_tickers = ['usdt', 'usdc']
+
+def compile_prices(ticker):
+	
+	ohlc_db = open('dbs/crypto-ohlc-'+ticker+'.db.json', 'r')
+	ohlc_objs = json.load(ohlc_db)
+	ohlc_db.close()
+	prices = {'timestamps': [], 'values': []}
+	
+	for timestamp, price in ohlc_objs.items():
+		prices['timestamps'].append( (int(timestamp)//3600)-1 )
+		prices['values'].append(float(price))
+	
+	return prices
+
+
+def compile_stable_ins(t):
+	
+	txs_db = {}
+	txs_objs = {}
+	for ticker in stable_tickers:
+		txs_db[ticker] = open('.whale-txs-'+ticker+'.db.json', 'r')
+		txs_objs[ticker] = json.load(txs_db[ticker])
+		txs_db[ticker].close()
+	ins = {'timestamps': [], 'values': []}
+	
+	#TODO
+	
+	return ins
+
+
+def compile_stable_net(t):
+	
+	txs_db = {}
+	txs_objs = {}
+	for ticker in stable_tickers:
+		txs_db[ticker] = open('.whale-txs-'+ticker+'.db.json', 'r')
+		txs_objs[ticker] = json.load(txs_db[ticker])
+		txs_db[ticker].close()
+	nets = {'timestamps': [], 'values': []}
+	
+	stable_nets = {} # [timestamp] = net_val
+	for ticker in stable_tickers:
+		for timestamp in txs_objs[ticker]:
+			stable_nets[timestamp] = 0
+	for ticker in stable_tickers:
+		for timestamp, accumulator in txs_objs[ticker].items():
+			stable_nets[timestamp] += accumulator['in'] - accumulator['out']
+	
+	for timestamp, net in stable_nets.items():
+		nets['timestamps'].append( int(timestamp)//3600 )
+		nets['values'].append( net )
+	
+	return nets
+
+
+def compile_ins(ticker):
+	
+	txs_db = open('.whale-txs-'+ticker+'.db.json', 'r')
+	txs_objs = json.load(txs_db)
+	txs_db.close()
+	ins = {'timestamps': [], 'values': []}
+	
+	for timestamp, accumulator in txs_objs.items():
+		ins['timestamps'].append(int(timestamp)//3600)
+		ins['values'].append( accumulator['in'] )
+	
+	return ins
+
+
+def compile_net(ticker):
+	
+	txs_db = open('.whale-txs-'+ticker+'.db.json', 'r')
+	txs_objs = json.load(txs_db)
+	txs_db.close()
+	nets = {'timestamps': [], 'values': []}
+	
+	for timestamp, accumulator in txs_objs.items():
+		nets['timestamps'].append(int(timestamp)//3600)
+		nets['values'].append( accumulator['in'] - accumulator['out'] )
+	
+	return nets
+
+
+def compile_dif_ins(ticker):
+	pass
+	#TODO
+
+
+def compile_dif_net(ticker):
+	pass
+	#TODO
+
+
+functions = { '--i': compile_ins, '--n': compile_net, '--di': compile_dif_ins, '--dn': compile_dif_net, '--si': compile_stable_ins, '--sn': compile_stable_net }
+
+def main():
+	argv = sys.argv[1:]
+	opts, args = getopt.getopt(argv, '', longopts=['i','n','di','dn','si','sn'])
+	print(opts)
+	if len(args) < 1:
+		print("error: no ticker")
+		sys.exit()
+	valid_args = False
+	for ticker in tickers:
+		if args[0] == ticker:
+			valid_args = True
+			break
+	if not valid_args:
+		print("unknown ticker")
+		sys.exit()
+	
+	coin = args[0]
+	
+	matplotlib.rcParams['toolbar'] = 'None'
+	
+	data_arrays = []
+	data_arrays.append( compile_prices(coin) )
+	
+	for option in opts:
+		data_arrays.append( functions[option[0]](coin) )
+	
+	plot_arrays( data_arrays )
+
+
+
+def plot_arrays( data_arrays ):
+	
+	axes = pp.subplot(len(data_arrays),1,1)
+	
+	axes.plot(data_arrays[0]['timestamps'], data_arrays[0]['values'], marker='o',linestyle=' ', color=theme_objs['colors']['color1'])
+	
+	for spine, s in axes.spines.items():
+		s.set_color(theme_objs['colors']['color15'])
+	
+	for ticklabel in axes.xaxis.get_ticklabels():
+		ticklabel.set_color(theme_objs['special']['foreground'])
+	for ticklabel in axes.yaxis.get_ticklabels():
+		ticklabel.set_color(theme_objs['special']['foreground'])
+	
+	for gridline in axes.get_xgridlines():
+		gridline.set_color(theme_objs['colors']['color8'])
+	for gridline in axes.get_ygridlines():
+		gridline.set_color(theme_objs['colors']['color8'])
+	
+	axes.yaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+	axes.xaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+	axes.grid()
+	axes.set_facecolor(theme_objs['special']['background'])
+	
+	iteration = 2
+	for i in range( 1, len(data_arrays) ):
+		axes = pp.subplot(len(data_arrays),1,iteration)
+		
+		axes.plot(data_arrays[i]['timestamps'], data_arrays[i]['values'], marker='o',linestyle=' ', color=theme_objs['colors']['color'+str(iteration)])
+		
+		for spine, s in axes.spines.items():
+			s.set_color(theme_objs['colors']['color15'])
+		
+		for ticklabel in axes.xaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		for ticklabel in axes.yaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		
+		for gridline in axes.get_xgridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		for gridline in axes.get_ygridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		
+		axes.yaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes.xaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes.grid()
+		axes.set_facecolor(theme_objs['special']['background'])
+		
+		iteration += 1
+	
+	pp.gcf().set_facecolor(theme_objs['special']['background'])
+	pp.show()
+
+
+'''
+	net_inflow = False
+	if net_inflow:
+		for i in range( 0, len(txs_timestamp) ):
+			net_inflow_timestamp.append(txs_timestamp[i])
+			net_inflow_amount.append(txs_stable_net_amount_in[i] - txs_total_in[i]) #TODO shohudl probably subtract all high cap coins from all stables
+
+	#figure, axes = pp.subplots(2,1)
+	if net_inflow:
+		axes_price = pp.subplot(2,1,1)
+	else:
+		axes_price = pp.subplot(3,1,1)
+
+	axes_price.plot(prices['timestamps'], prices['values'], marker='o',linestyle=' ', color=theme_objs['colors']['color1'])
+	for spine, s in axes_price.spines.items():
+		s.set_color(theme_objs['colors']['color15'])
+	for ticklabel in axes_price.xaxis.get_ticklabels():
+		ticklabel.set_color(theme_objs['special']['foreground'])
+	for ticklabel in axes_price.yaxis.get_ticklabels():
+		ticklabel.set_color(theme_objs['special']['foreground'])
+	for gridline in axes_price.get_xgridlines():
+		gridline.set_color(theme_objs['colors']['color8'])
+	for gridline in axes_price.get_ygridlines():
+		gridline.set_color(theme_objs['colors']['color8'])
+	axes_price.yaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+	axes_price.xaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+	axes_price.grid()
+	axes_price.set_facecolor(theme_objs['special']['background'])
+	#axes[0].plot(unix_hours, prices, marker='o',linestyle=' ', color='#FFAA00')
+	#axes[0].grid()
+	if net_inflow:
+		axes_txs = pp.subplot(2,1,2, sharex=axes_price)
+		axes_txs.plot(net_inflow_timestamp, net_inflow_amount, marker='o',linestyle=' ', color=theme_objs['colors']['color2'])
+		for spine, s in axes_txs.spines.items():
+			s.set_color(theme_objs['colors']['color15'])
+		for ticklabel in axes_txs.xaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		for ticklabel in axes_txs.yaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		for gridline in axes_txs.get_xgridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		for gridline in axes_txs.get_ygridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		axes_txs.yaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes_txs.xaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes_txs.grid()
+		axes_txs.set_facecolor(theme_objs['special']['background'])
+		pp.axhline(color=theme_objs['colors']['color15'])
+	else:
+		axes_txs = pp.subplot(3,1,2, sharex=axes_price)
+		axes_txs.plot(nets['timestamps'], nets['values'], marker='o',linestyle=' ', color=theme_objs['colors']['color2'])
+		for spine, s in axes_txs.spines.items():
+			s.set_color(theme_objs['colors']['color15'])
+		for ticklabel in axes_txs.xaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		for ticklabel in axes_txs.yaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		for gridline in axes_txs.get_xgridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		for gridline in axes_txs.get_ygridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		axes_txs.yaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes_txs.xaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes_txs.grid()
+		axes_txs.set_facecolor(theme_objs['special']['background'])
+		pp.axhline(color=theme_objs['colors']['color15'])
+		
+		#axes[1].plot(txs_unix_hours, txs_usds, 'ro')
+		#axes[1].grid()
+		axes_txs_stable = pp.subplot(3,1,3, sharex=axes_price)
+		axes_txs_stable.plot(stable_nets['timestamps'], stable_nets['values'], marker='o',linestyle=' ', color=theme_objs['colors']['color3'])
+		for spine, s in axes_txs_stable.spines.items():
+			s.set_color(theme_objs['colors']['color15'])
+		for ticklabel in axes_txs_stable.xaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		for ticklabel in axes_txs_stable.yaxis.get_ticklabels():
+			ticklabel.set_color(theme_objs['special']['foreground'])
+		for gridline in axes_txs_stable.get_xgridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		for gridline in axes_txs_stable.get_ygridlines():
+			gridline.set_color(theme_objs['colors']['color8'])
+		axes_txs_stable.yaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes_txs_stable.xaxis.get_offset_text().set_color(theme_objs['special']['foreground'])
+		axes_txs_stable.grid()
+		axes_txs_stable.set_facecolor(theme_objs['special']['background'])
+		pp.axhline(color=theme_objs['colors']['color15'])
+
+	pp.gcf().set_facecolor(theme_objs['special']['background'])
+	pp.show()
+'''
+main()

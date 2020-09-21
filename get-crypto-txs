@@ -1,0 +1,133 @@
+#!/usr/bin/python3.6
+
+import sys
+import time
+import requests
+import json
+
+apikey = 'your api key here'
+
+tickers = ['btc', 'eth', 'usdc', 'usdt']
+stable_tickers = ['usdc','usdt']
+accumulated_usd = {} # [ticker][timestamp][direction] : [btc][123091820938][out]
+for ticker in tickers:
+	accumulated_usd[ticker] = {}
+
+total_usd_unknown_to_exchange = {}
+total_txs_unknown_to_exchange = {}
+
+current_second_timestamp = int(time.time())
+current_minute = current_second_timestamp // 60
+current_hour = current_second_timestamp // 3600
+fetch_minute = current_minute-12 #fetch transactions from the minute - 12 since thats the maximum time it takes for a block to be mined
+fetch_minute_timestamp = 60*fetch_minute
+
+fetch_minute_hour = fetch_minute_timestamp // 3600 #the hour that this minute belongs to
+fetch_minute_hour_timestamp = fetch_minute_hour*3600
+
+cache_file = open("dbs/crypto-txs.cache.json", "r")
+cache_objs = json.load(cache_file)
+cache_file.close()
+
+# determine the interval to fetch
+# start should be > cache file, > (fetch_minute - 40)
+allowed_timestamp = (fetch_minute - 40)*60
+cache_timestamp = cache_objs["last-known-minute-timestamp"]
+cache_hour_timestamp = (cache_timestamp // 3600) * 3600
+
+start_timestamp = max(cache_timestamp+60,allowed_timestamp)
+end_timestamp = fetch_minute_timestamp + 60
+start_hour = start_timestamp // 3600
+end_hour = fetch_minute_timestamp // 3600
+
+if end_timestamp - start_timestamp > 60:
+	print( "start hour: "+str(start_hour)+" end hour: "+str(end_hour) )
+	print( 'start timestamp: '+str(start_timestamp)+' end timestamp: '+str(end_timestamp) )
+if fetch_minute_timestamp == cache_timestamp:
+	print( "already fetched minute "+str(fetch_minute_timestamp) )
+	sys.exit()
+
+for ticker in tickers:
+	accumulated_usd[ticker][str(cache_hour_timestamp)] = { 'in': 0, 'out': 0 } #create dict for the cache hour since it might be out of range
+	for hour in range(start_hour, end_hour+1):
+		accumulated_usd[ticker][str(hour*3600)] = { 'in': 0, 'out': 0 }
+
+#fill accumulated_usd with data from cache_file
+for ticker in tickers:
+	for direction, amount in cache_objs[ticker].items():
+		accumulated_usd[ticker][str(cache_hour_timestamp)][direction] = amount
+
+for ticker in tickers:
+	cursor = ''
+	done = False
+	while not done:
+		time.sleep(6) #this is necessary since the API doesnt reset every seccond but cheks for interval between requests
+		response = requests.get('https://api.whale-alert.io/v1/transactions?api_key='+apikey+'&min_value=500000&start='+str(start_timestamp)+'&end='+str(end_timestamp)+'&currency='+ticker+cursor, timeout=4 ) 
+		if response.status_code != 200:
+			print('http error: '+str(response.status_code))
+			sys.exit()
+		response_str = response.text
+		response_objs = json.loads(response_str)
+		if response_objs['count']  < 100:
+			done = True
+		else:
+			cursor = "&cursor="+response_objs['cursor']
+			print( "more than 100 txs between "+str(start_timestamp)+":"+str(end_timestamp) )
+		if response_objs['count']  == 0:
+			break
+		transactions = response_objs['transactions']
+		for tx in transactions:
+			if tx['transaction_type'] != 'transfer':
+				print('weird tx type '+tx['transaction_type']+'-'+tx['symbol'])
+				continue
+			tx_hour_timestamp = (int(tx['timestamp']) // 3600) * 3600
+			tx_usd_amount = int(tx['amount_usd'])
+			from_type = tx['from']['owner_type']
+			to_type = tx['to']['owner_type']
+			
+			#ins
+			if (to_type == 'exchange') and (from_type == 'unknown'):
+				accumulated_usd[ticker][str(tx_hour_timestamp)]['in'] += tx_usd_amount
+			#outs
+			if (to_type == 'unknown') and (from_type == 'exchange'):
+				accumulated_usd[ticker][str(tx_hour_timestamp)]['out'] += tx_usd_amount
+
+# update cache with current hour
+cache_objs['last-known-minute-timestamp'] = fetch_minute_timestamp
+for ticker in tickers:
+	cache_objs[ticker]['in'] = accumulated_usd[ticker][str(fetch_minute_hour_timestamp)]['in']
+	cache_objs[ticker]['out'] = accumulated_usd[ticker][str(fetch_minute_hour_timestamp)]['out']
+	# remove current hour from accum_usd since it was added to cache
+	del accumulated_usd[ticker][str(fetch_minute_hour_timestamp)]
+cache_file = open("dbs/crypto-txs.cache.json", "w")
+json.dump(cache_objs, cache_file)
+cache_file.close()
+
+# TODO remove this, it doesnt belong on this script
+# update btc net ins cache
+total_ins_btc_cache_file = open(".whale-txs-total-in-btc.cache", "w")
+total_ins_btc_cache_file.write(str( (cache_objs['btc']['in'] - cache_objs['btc']['out'])//1000000 )+"M\n")
+total_ins_btc_cache_file.close()
+# update stables net ins cache
+net_in_stable = 0
+for ticker in stable_tickers:
+	net_in_stable += ( (cache_objs[ticker]['in'] - cache_objs[ticker]['out'])//1000000 )
+total_ins_stable_cache_file = open(".whale-txs-total-in-stable.cache", "w")
+total_ins_stable_cache_file.write(str( net_in_stable )+"M\n")
+total_ins_stable_cache_file.close()
+
+# if remaining hours > 0 load db
+if len(accumulated_usd['btc']) > 0: #all tickers should have the same length
+	# for each remaining hour (the ones not added to cache)
+	for ticker in tickers:
+		db_file = open("dbs/crypto-txs-"+ticker+".db.json", "rb+")
+		db_file.seek(-3, 2) # remove the \n}\n
+		db_file.write(b",\n")
+		for timestamp, accumulator in accumulated_usd[ticker].items():
+			usd_in = str(accumulator['in'])
+			usd_out = str(accumulator['out'])
+			entry_string = '"'+timestamp+'"'+":"+'{"in":'+usd_in+',"out":'+usd_out+'},\n'
+			db_file.write( entry_string.encode('utf-8') )
+		db_file.seek(-2, 1) #remove ,\n of the last entry
+		db_file.write(b"\n}")
+		db_file.close()
