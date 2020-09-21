@@ -63,10 +63,9 @@ for ticker in tickers:
 	entry_string = ""
 	for candle_close_time in ticker_avg[ticker]:
 		entry_string = '"'+candle_close_time+'"'+":"+str( int(ticker_avg[ticker][candle_close_time]) )+",\n"
-		print(entry_string)
 		ohlc_db.write(entry_string.encode('utf-8'))
 	ohlc_db.seek(-2, 1) #remove the comma on the last entry
-	ohlc_db.write(b"\n}")
+	ohlc_db.write(b"\n}\n")
 	ohlc_db.close()
 
 cache_file = open(ohlc_cache,'w')

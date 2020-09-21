@@ -129,5 +129,5 @@ if len(accumulated_usd['btc']) > 0: #all tickers should have the same length
 			entry_string = '"'+timestamp+'"'+":"+'{"in":'+usd_in+',"out":'+usd_out+'},\n'
 			db_file.write( entry_string.encode('utf-8') )
 		db_file.seek(-2, 1) #remove ,\n of the last entry
-		db_file.write(b"\n}")
+		db_file.write(b"\n}\n")
 		db_file.close()
