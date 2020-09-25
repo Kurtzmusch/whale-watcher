@@ -28,6 +28,42 @@ def compile_prices(ticker):
 	
 	return prices
 
+def aggregate_stable_outs():
+	txs_db = {}
+	txs_objs = {}
+	for ticker in stable_tickers:
+		txs_db[ticker] = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
+		txs_objs[ticker] = json.load(txs_db[ticker])
+		txs_db[ticker].close()
+	
+	aggregated_outs = {} # [timestamp] = net_val
+	for ticker in stable_tickers:
+		for timestamp in txs_objs[ticker]:
+			aggregated_outs[timestamp] = 0
+	for ticker in stable_tickers:
+		for timestamp, accumulator in txs_objs[ticker].items():
+			aggregated_outs[timestamp] += accumulator['out']
+	
+	return aggregated_outs
+
+def aggregate_stable_ins():
+	txs_db = {}
+	txs_objs = {}
+	for ticker in stable_tickers:
+		txs_db[ticker] = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
+		txs_objs[ticker] = json.load(txs_db[ticker])
+		txs_db[ticker].close()
+	
+	aggregated_ins = {} # [timestamp] = net_val
+	for ticker in stable_tickers:
+		for timestamp in txs_objs[ticker]:
+			aggregated_ins[timestamp] = 0
+	for ticker in stable_tickers:
+		for timestamp, accumulator in txs_objs[ticker].items():
+			aggregated_ins[timestamp] += accumulator['in']
+	
+	return aggregated_ins
+
 
 def compile_stable_ins(t):
 	
@@ -43,28 +79,16 @@ def compile_stable_ins(t):
 	
 	return ins
 
-
 def compile_stable_net(t):
 	
-	txs_db = {}
-	txs_objs = {}
-	for ticker in stable_tickers:
-		txs_db[ticker] = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
-		txs_objs[ticker] = json.load(txs_db[ticker])
-		txs_db[ticker].close()
+	ins = aggregate_stable_ins()
+	outs = aggregate_stable_outs()
+	
 	nets = {'timestamps': [], 'values': []}
 	
-	stable_nets = {} # [timestamp] = net_val
-	for ticker in stable_tickers:
-		for timestamp in txs_objs[ticker]:
-			stable_nets[timestamp] = 0
-	for ticker in stable_tickers:
-		for timestamp, accumulator in txs_objs[ticker].items():
-			stable_nets[timestamp] += accumulator['in'] - accumulator['out']
-	
-	for timestamp, net in stable_nets.items():
+	for timestamp in ins:
 		nets['timestamps'].append( int(timestamp)//3600 )
-		nets['values'].append( net )
+		nets['values'].append( ins[timestamp] - outs[timestamp] )
 	
 	return nets
 
@@ -107,11 +131,11 @@ def compile_dif_net(ticker):
 	#TODO
 
 
-functions = { '--i': compile_ins, '--n': compile_net, '--di': compile_dif_ins, '--dn': compile_dif_net, '--si': compile_stable_ins, '--sn': compile_stable_net }
+functions = { '--i': compile_ins, '--n': compile_net, '--di': compile_dif_ins, '--dn': compile_dif_net, '--si': compile_stable_ins, '--sn': compile_stable_net, '--sn2': compile_stable_net2 }
 
 def main():
 	argv = sys.argv[1:]
-	opts, args = getopt.getopt(argv, '', longopts=['i','n','di','dn','si','sn'])
+	opts, args = getopt.getopt(argv, '', longopts=['i','n','di','dn','si','sn', 'sn2'])
 	print(opts)
 	if len(args) < 1:
 		print("error: no ticker")
