@@ -67,15 +67,13 @@ def aggregate_stable_ins():
 
 def compile_stable_ins(t):
 	
-	txs_db = {}
-	txs_objs = {}
-	for ticker in stable_tickers:
-		txs_db[ticker] = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
-		txs_objs[ticker] = json.load(txs_db[ticker])
-		txs_db[ticker].close()
+	aggregated_ins = aggregate_stable_ins()
+	
 	ins = {'timestamps': [], 'values': []}
 	
-	#TODO
+	for timestamp, value in aggregated_ins.items():
+		ins['timestamps'].append( int(timestamp)//3600 )
+		ins['values'].append( value )
 	
 	return ins
 
@@ -131,7 +129,7 @@ def compile_dif_net(ticker):
 	#TODO
 
 
-functions = { '--i': compile_ins, '--n': compile_net, '--di': compile_dif_ins, '--dn': compile_dif_net, '--si': compile_stable_ins, '--sn': compile_stable_net, '--sn2': compile_stable_net2 }
+functions = { '--i': compile_ins, '--n': compile_net, '--di': compile_dif_ins, '--dn': compile_dif_net, '--si': compile_stable_ins, '--sn': compile_stable_net }
 
 def main():
 	argv = sys.argv[1:]
