@@ -178,7 +178,7 @@ def main():
 	
 	coin = args[0]
 	
-	matplotlib.rcParams['toolbar'] = 'None'
+	#matplotlib.rcParams['toolbar'] = 'None'
 	
 	data_arrays = []
 	data_arrays.append( compile_prices(coin) )
