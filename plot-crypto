@@ -138,8 +138,24 @@ def compile_dif_ins(ticker):
 
 def compile_dif_net(ticker):
 	
-	pass
-	#TODO
+	stable_ins = aggregate_stable_ins()
+	stable_outs = aggregate_stable_outs()
+	
+	stable_nets = {}
+	
+	for timestamp in stable_ins:
+		stable_nets[timestamp] = stable_ins[timestamp] - stable_outs[timestamp]
+	
+	txs_db = open('dbs/crypto-txs-'+ticker+'.db.json', 'r')
+	txs_objs = json.load(txs_db)
+	txs_db.close()
+	dif_net = {'timestamps': [], 'values': []}
+	
+	for timestamp, accumulator in txs_objs.items():
+		dif_net['timestamps'].append(int(timestamp)//3600)
+		dif_net['values'].append( stable_nets[timestamp] - (accumulator['in'] - accumulator['out']) )
+	
+	return dif_net
 
 
 functions = { '--i': compile_ins, '--n': compile_net, '--di': compile_dif_ins, '--dn': compile_dif_net, '--si': compile_stable_ins, '--sn': compile_stable_net }
