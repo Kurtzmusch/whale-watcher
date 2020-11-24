@@ -1,0 +1,89 @@
+#!/usr/bin/python3.6
+
+import json
+import time
+import os
+
+# ------- setup directory
+if not os.path.exists('dbs'):
+	os.makedirs('dbs')
+
+# --------setup file names
+tickers = ["btc","eth"]
+stable_tickers = ["usdc", "usdt"]
+
+ohlc_dbs = {}
+txs_dbs = {}
+
+for ticker in tickers:
+	ohlc_dbs[ticker] = "dbs/crypto-ohlc-"+ticker+".db.json"
+	txs_dbs[ticker] = "dbs/crypto-txs-"+ticker+".db.json"
+
+txs_cache = "dbs/crypto-txs.cache.json"
+ohlc_cache = "dbs/crypto-ohlc.cache.json"
+
+
+
+# ------ get timestamps
+current_time = int(time.time())
+
+current_hour = current_time // 3600
+current_hour_timestamp = 3600*current_hour
+
+current_minute = current_time // 60
+current_minute_timestamp = 60*current_minute
+
+
+
+# ------ reset cache files
+txs_cache_objs = { 'last-known-minute-timestamp': str(current_minute_timestamp) }
+
+for ticker in tickers:
+	txs_cache_objs[ticker] = { 'in': 0, 'out': 0 }  
+for stable_ticker in stable_tickers:  
+	txs_cache_objs[stable_ticker] = { 'in': 0, 'out': 0 }  
+
+txs_cache_file = open(txs_cache,'w')
+json.dump(txs_cache_objs, txs_cache_file)
+txs_cache_file.close()
+
+ohlc_cache_objs = { 'last-known-hour-timestamp': str(current_hour_timestamp) }
+
+ohlc_cache_file = open(ohlc_cache,'w')
+json.dump(ohlc_cache_objs, ohlc_cache_file)
+ohlc_cache_file.close()
+
+
+#reset db files
+
+for ticker, filename in ohlc_dbs.items():
+	db = open(filename, 'w')
+	db.write("{\n")
+	db.write('"'+str(current_hour_timestamp)+":0\n")
+	db.write("}\n")
+	db.close()
+
+
+for ticker, filename in txs_dbs.items():
+	db = open(filename, 'w')
+	db.write("{\n")
+	db.write('"'+str(current_hour_timestamp)+'":{"in":0,"out":0}\n')
+	db.write("}\n")
+	db.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
