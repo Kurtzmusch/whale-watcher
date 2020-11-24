@@ -13,6 +13,7 @@ by default all transacions above 500k USD are collected, this is a lower limit i
 `matplotlib`
 
 ##### usage
+`ww-reset-db` should be used to reset or initialize the json database
 `get-crypto-ohlc` should be run hourly  
 `get-crypto-txs` should be run often, since whale-alert imposes a limit of api calls you may loose data if too many transactions build up. whale-alert also doesnt allow to fetch data older than 1 hour, so a good rate is around 1 to 15 minutes. 1 minute is recommended if you intend to watch the cache files and setup alarms on your system.  
 
@@ -43,11 +44,7 @@ this will plot 2 graphs: a price graph for ETH and a difference graph between th
 all stablecoins are always treated as one
 
 ##### installation\setup
-the scripts assume the database files exist on a ~/dbs/ directory, so one must create these.  
-the scripts assume the cache files exist on a ~/dbs/ directory  
-the scripts assume a file called whale-alert-api-key exists on the home directory, so its necessary to obtain one key  
-the scripts assume a file called colors.json exists on the home folder  
+before running any script it's necessary to run `ww-reset-db` in order to create a new /dbs folder with some necessary files
+the scripts assume a file called whale-alert-api-key exists on the directory of execution, so its necessary to obtain one key and put it on the file
+the scripts assume a file called colors.json exists on the directory of execution
 
-these files are provided in this repo, so just place them in the home folder
-
-for each ticker you wish to track you need to create 2 db files: `crypto-ohlc-<ticker-name>.db.json`, `crypto-txs-<ticker-name>.db.json` and they must be pre filled with data, you can use the dbs file provided as a template
