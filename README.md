@@ -1,6 +1,9 @@
 ##### description
 
 whale-watcher is a collection of scripts that helps to keep track of large cryptocurrency transactions in and out of exchanges.  
+
+![alt text](https://github.com/Kurtzmusch/whale-watcher/blob/assets/btc-n-sn.png)
+
 `get-crypto-ohlc` is used to collect the price of the currencyes. it uses cryptowatch api  
 `get-crypto-txs` is used to collect large transactions from and to exchanges. it uses whale-alert api  
 `plot-crypto` is used to visualize the data from the generated database  
