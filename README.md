@@ -22,7 +22,7 @@ by default all transacions above 500k USD are collected, this is a lower limit i
 
 since these scripts are meant to be run on a schedule, here's a crontab exemple(assumes scripts are located at ~/bin)
 ```
-5    *     *     *     *     bin/get-crypto-ohlce 2>> log/get-crypto-ohlc.log
+5    *     *     *     *     bin/get-crypto-ohlc 2>> log/get-crypto-ohlc.log
 */1  *     *     *     *     bin/get-crypto-txs 2>> log/get-crypto-txs.log
 ```
 
