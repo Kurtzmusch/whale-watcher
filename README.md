@@ -17,7 +17,7 @@ by default all transacions above 500k USD are collected, this is a lower limit i
 
 ##### usage
 `ww-reset-db` should be used to reset or initialize the json database\
-`get-crypto-ohlc` should be run hourly\ 
+`get-crypto-ohlc` should be run hourly\
 `get-crypto-txs` should be run often, since whale-alert imposes a limit of api calls you may loose data if too many transactions build up. whale-alert also doesnt allow to fetch data older than 1 hour, so a good rate is around 1 to 15 minutes. 1 minute is recommended if you intend to watch the cache files and setup alarms on your system.\
 
 since these scripts are meant to be run on a schedule, here's a crontab exemple(assumes scripts are located at ~/bin)
@@ -26,7 +26,7 @@ since these scripts are meant to be run on a schedule, here's a crontab exemple(
 */1  *     *     *     *     bin/get-crypto-txs 2>> log/get-crypto-txs.log
 ```
 
-plot-crypto plots requested graphs from data in your local database\
+`plot-crypto` plots requested graphs from data in your local database\
 the command line options are:
 
 ```lang-none
@@ -48,6 +48,6 @@ all stablecoins are always treated as one
 
 ##### installation\setup
 - before running any script it's necessary to run `ww-reset-db` in order to create a new /dbs folder with some necessary files
-- the scripts assume a file called whale-alert-api-key exists on the directory of execution, so its necessary to obtain one key and put it on the file
-- the scripts assume a file called colors.json exists on the directory of execution
+- the scripts assume a file called `whale-alert-api-key` exists on the directory of execution, so its necessary to obtain one key and put it on the file
+- the scripts assume a file called `colors.json` exists on the directory of execution
 
