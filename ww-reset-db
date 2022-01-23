@@ -36,7 +36,7 @@ current_minute_timestamp = 60*current_minute
 
 
 # ------ reset cache files
-txs_cache_objs = { 'last-known-minute-timestamp': str(current_minute_timestamp) }
+txs_cache_objs = { 'last-known-minute-timestamp': current_minute_timestamp }
 
 for ticker in tickers:
 	txs_cache_objs[ticker] = { 'in': 0, 'out': 0 }  
