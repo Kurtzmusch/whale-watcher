@@ -59,7 +59,7 @@ ohlc_cache_file.close()
 for ticker, filename in ohlc_dbs.items():
 	db = open(filename, 'w')
 	db.write("{\n")
-	db.write('"'+str(current_hour_timestamp)+":0\n")
+	db.write('"'+str(current_hour_timestamp)+'":0\n')
 	db.write("}\n")
 	db.close()
 
@@ -70,20 +70,4 @@ for ticker, filename in txs_dbs.items():
 	db.write('"'+str(current_hour_timestamp)+'":{"in":0,"out":0}\n')
 	db.write("}\n")
 	db.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
